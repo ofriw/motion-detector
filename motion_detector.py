@@ -56,27 +56,62 @@ def fixup_rect(rect, scaleFactor):
             round((rect[1] + rect[3]) * scaleFactor))
 
 def rect_diagonal(rect):
-  return math.sqrt((rect[2] - rect[0]) ** 2 + (rect[3] - rect[1]) ** 2)
+    """Calculate the diagonal length of a rectangle.
+    
+    Takes a rectangle in (x1, y1, x2, y2) format and returns the length of its
+    diagonalusing the Pythagorean theorem.
+
+    Args:
+        rect: Tuple of (x1, y1, x2, y2) defining the rectangle coordinates
+
+    Returns:
+        Float value representing the diagonal length in pixels
+    """
+    return math.sqrt((rect[2] - rect[0]) ** 2 + (rect[3] - rect[1]) ** 2)
 
 def bounding_rect(rects):
-  return (min([r[0] for r in rects]),
-          min([r[1] for r in rects]),
-          max([r[2] for r in rects]),
-          max([r[3] for r in rects]))
+    """Calculate the minimum bounding rect containing all input rects.
+    
+    Takes a list of rects in (x1, y1, x2, y2) format and returns the smallest
+    rects that contains all of them.
 
-def merge_rects(rects, dist=30):
-  rects.sort(key=cmp_to_key(lambda a, b: rect_dist(a, b)))
-  did_merge = True
-  while did_merge:
-    did_merge = False
-    for i in range(len(rects) - 2):
-      dist = max(rect_diagonal(rects[i]), rect_diagonal(rects[i + 1]))    
-      if rect_dist(rects[i], rects[i + 1]) < dist:
-        rects[i] = bounding_rect([rects[i], rects[i + 1]])
-        rects.pop(i + 1)
-        did_merge = True
-        break
-  return rects
+    Args:
+        rects: List of tuples (x1, y1, x2, y2) defining input rectangles
+
+    Returns:
+        Tuple (x1, y1, x2, y2) defining the bounding rectangle coordinates
+    """
+    return (min([r[0] for r in rects]),
+            min([r[1] for r in rects]), 
+            max([r[2] for r in rects]),
+            max([r[3] for r in rects]))
+
+def merge_rects(rects):
+    """Merge nearby rectangles into larger bounding rectangles.
+    
+    Takes a list of rectangles and iteratively merges pairs that are closer than
+    their diagonal length (think bubble sort). This helps consolidate multiple
+    detections of the same motion region into a single bounding rectangle.
+
+    Args:
+        rects: List of tuples (x1, y1, x2, y2) defining input rectangles
+
+    Returns:
+        List of merged rectangles in (x1, y1, x2, y2) format, with overlapping
+        or nearby rectangles combined into larger bounding rectangles
+    """
+    rects.sort(key=cmp_to_key(lambda a, b: rect_dist(a, b)))
+    did_merge = True
+    while did_merge:
+        did_merge = False
+        for i in range(len(rects) - 2):
+            dist = max(rect_diagonal(rects[i]), rect_diagonal(rects[i + 1]))    
+            if rect_dist(rects[i], rects[i + 1]) < dist:
+                rects[i] = bounding_rect([rects[i], rects[i + 1]])
+                rects.pop(i + 1)
+                did_merge = True
+                break
+    return rects
 
 def motion_detection_process(ctx, frame):
 	"""Process a video frame for motion detection.
@@ -101,15 +136,11 @@ def motion_detection_process(ctx, frame):
                                  round(scaleFactor * frame.shape[0]))),
 																 cv2.COLOR_BGR2GRAY)
 	gray = cv2.GaussianBlur(gray, (21, 21), 0)
-	
 	# Push the current frame to the reference frame
 	if ctx['avg_frame_gray'] is None is None:
 		ctx['avg_frame_gray'] = gray.copy().astype("float")
 		return []
-			
 	cv2.accumulateWeighted(gray, ctx['avg_frame_gray'], 0.5)
-
-	
 	# Compute the absolute difference between the current frame and the ref frame
 	frameDelta = cv2.absdiff(gray, cv2.convertScaleAbs(ctx['avg_frame_gray']))
 	thresh = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
@@ -129,5 +160,4 @@ def motion_detection_process(ctx, frame):
 		# detected rects
 		(x, y, w, h) = cv2.boundingRect(c)
 		rects.append(fixup_rect((x, y, w, h), 1 / scaleFactor))
-
 	return merge_rects(rects)
