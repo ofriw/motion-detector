@@ -1,13 +1,23 @@
 # Motion Detection Demo
 
 This project demonstrates real-time motion detection using OpenCV, implemented
-in both single-threaded and multi-process versions.
+in both single-threaded and multi-process python versions.
 
 ## Running the Demo
+
+First, install the dependencies:
+
+```bash
+pipenv install
+```
+
+Then, run the single-threaded version:
 
 ```bash
 pipenv run python3 main-single-thread.py
 ```
+
+Or the multi-process version:
 
 ```bash
 pipenv run python3 main-multi-process.py
@@ -38,3 +48,6 @@ While this demonstrates a more complex architecture, it actually runs slower
 than the single-threaded version due to the overhead of copying frame data
 between processes. A more efficient implementation would require shared memory,
 which is outside the scope of this demo.
+
+Performance: ~15 FPS on the provided sample video (tested on my 2018 MacBook Pro
+15")
