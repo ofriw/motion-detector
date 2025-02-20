@@ -44,7 +44,7 @@ class PipelineStep:
     def stop(self):
         """Stop the pipeline step process and clean up."""
         self.input_queue.put(None)
-        self.process.terminate()
+        self.process.kill()
         self.process = None
         if self.cleanup_func:
             self.cleanup_func()
